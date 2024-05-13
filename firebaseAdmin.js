@@ -1,9 +1,13 @@
-const admin = require('firebase-admin');
-const serviceAccount = require('./config/newshub-01-firebase-adminsdk-j7t1q-8dd3d22759.json');
+import firebaseAdmin from 'firebase-admin';
+import fs from 'fs';
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  //databaseURL: 'https://your-firebase-project.firebaseio.com' // Replace with your database URL
+// Read the content of the JSON file synchronously and parse it
+const jsonData = JSON.parse(fs.readFileSync('./newshub-01-firebase-adminsdk-j7t1q-8dd3d22759.json', 'utf8'));
+
+// Initialize Firebase Admin SDK with the parsed JSON data
+firebaseAdmin.initializeApp({
+  credential: firebaseAdmin.credential.cert(jsonData),
+  // Add additional configuration options as needed
 });
 
-module.exports = admin;
+export default firebaseAdmin;

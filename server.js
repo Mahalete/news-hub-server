@@ -1,22 +1,30 @@
-// server.js
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const admin = require('./firebaseAdmin');
+import admin from './firebaseAdmin.js';
+import firebaseAdmin from './firebaseAdmin.js';
+
+import express from 'express';
 
 const app = express();
-const port = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
+// Initialize Firestore
+const db = admin.firestore();
 
-// Example API route
-app.get('/api/news', (req, res) => {
-  // Your logic to fetch news from Firestore or external API
-  res.json({ message: 'News data from backend' });
+// Example API route to fetch news data
+app.get('/api/news', async (req, res) => {
+  try {
+    // Query Firestore for news collection
+    const snapshot = await db.collection('news').get();
+    
+    // Extract data from snapshot
+    const newsData = [];
+    snapshot.forEach((doc) => {
+      newsData.push(doc.data());
+    });
+
+    res.json({ news: newsData });
+  } catch (error) {
+    console.error('Error fetching news:', error);
+    res.status(500).json({ error: 'Failed to fetch news' });
+  }
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+export default app;

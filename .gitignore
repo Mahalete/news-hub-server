@@ -1,2 +1,11 @@
-# Inside .gitignore file in the backend directory
+# Node.js dependencies
 node_modules/
+
+# Environment variables file
+.env
+
+# Firebase service account key JSON file
+config/newshub-01-firebase-adminsdk-j7t1q-8dd3d22759.json
+
+# Other build files or directories (if applicable)
+/build/
