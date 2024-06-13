@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import admin from './firebaseAdmin.js'; // Assuming this is your Firebase Admin initialization code
 
+const firestore = admin.firestore();
+
 // Initialize Express app
 const app = express();
 
@@ -15,16 +17,17 @@ app.post('/api/signup', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Create user with email and password
-    const userRecord = await admin.auth().createUser({
-      email: email,
-      password: password
+    const userRecord = await admin.auth().createUser({ email, password });
+    console.log('User created successfully:', userRecord.uid); // Log the UID of the created user
+
+    await firestore.collection('users').doc(userRecord.uid).set({
+      email,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    console.log('Successfully created new user:', userRecord.uid);
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
-    console.error('Error creating user:', error);
+    console.error('Failed to create user:', error); // Log any error during user creation
     res.status(500).json({ error: 'Failed to create user' });
   }
 });
@@ -33,39 +36,56 @@ app.post('/api/signup', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for email:', email); // Log the email attempting to log in
 
-    // Authenticate user
-    const user = await admin.auth().getUserByEmail(email); // Fetch user details
-    // You can use your authentication logic here
-
-    // Generate Firebase ID token
+    const user = await admin.auth().getUserByEmail(email);
     const firebaseToken = await admin.auth().createCustomToken(user.uid);
 
-    // Respond with Firebase ID token and user data
-    res.status(200).json({ token: firebaseToken, user: { email: user.email } });
+    res.status(200).json({ token: firebaseToken, user: { email: user.email, uid: user.uid } });
+    console.log('Login successful for email:', email); // Log the email after successful login
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Authentication failed:', error); // Log any authentication failure
     res.status(401).json({ error: 'Authentication failed' });
   }
 });
 
-// Endpoint for user logout
-app.post('/api/logout', async (req, res) => {
+// Endpoint for saving favorite articles
+app.post('/api/favorites', async (req, res) => {
+  const { userId, favorites } = req.body;
+
   try {
-    console.log('Received logout request');
-    // No need to sign out the user here as it's handled client-side with Firebase Authentication
-    console.log('User logged out');
-    res.status(200).json({ message: 'User logged out successfully' });
+    await firestore.collection('users').doc(userId).update({
+      favorites: admin.firestore.FieldValue.arrayUnion(...favorites)
+    });
+
+    res.status(200).send('Favorites updated successfully');
   } catch (error) {
-    console.error('Error logging out:', error);
-    res.status(500).json({ error: 'Failed to logout' });
+    console.error('Failed to update favorites:', error); // Log any error during favorite update
+    res.status(500).send('Failed to update favorites');
   }
 });
 
-// Endpoint for saving favorite articles
-// This endpoint remains unchanged...
+// Endpoint for retrieving favorite articles
+app.get('/api/favorites/:userId', async (req, res) => {
+  const { userId } = req.params;
 
-// Start the server
+  try {
+    console.log(`Retrieving favorite articles for user: ${userId}`);
+    const userRef = firestore.collection('users').doc(userId);
+    const doc = await userRef.get();
+    if (doc.exists) {
+      const favorites = doc.data().favorites || [];
+      console.log(`Number of favorite articles for user ${userId}: ${favorites.length}`);
+      res.status(200).json(favorites);
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Failed to fetch favorite articles:', error);
+    res.status(500).json({ error: 'Failed to fetch favorite articles' });
+  }
+});
+
 app.listen(5000, () => {
   console.log('Server is running on port 5000');
 });

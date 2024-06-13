@@ -17,6 +17,9 @@ router.post('/logout', async (req, res) => {
     // Verify the ID token and decode its payload
     const decodedToken = await admin.auth().verifyIdToken(idToken);
 
+    // Log the decoded token for debugging
+    console.log('Decoded token:', decodedToken);
+
     // Perform the logout action (optional)
 
     // Respond with success message
